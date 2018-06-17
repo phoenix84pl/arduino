@@ -263,8 +263,7 @@ void loop()
     {
       String www=http.getString();   //Get the request response payload
       String ok=getValue(www, ';', 0);
-      String pinmode=getValue(www, ';', 1);
-      String pinwrite=getValue(www, ';', 2);
+      String ledmode=getValue(www, ';', 1);
  
       if(ok!="OK")
       {
@@ -279,14 +278,16 @@ void loop()
 //          pinMode(i0, bitRead(pinmode.toInt(), i0));
 //          digitalWrite(i0, bitRead(pinwrite.toInt(), i0));
             //sterowanie diodami
-          dioda_zmien(i0, bitRead(pinmode.toInt(), i0)==1?1023:0);
+          String tmp=getValue(www, ';', 2+i0);  //odczytuj kolejne pozycje
+          if(tmp=="") dioda_zmien(i0, bitRead(ledmode.toInt(), i0)==1?1023:0);  //jesli nie podano pwm, to 0:1
+          else dioda_zmien(i0, tmp.toInt());
         }
       }
       
-      Serial.println(www);                     //Print the response payload
-      Serial.println(ok);                     //Print the response payload
-      Serial.println(pinmode);                     //Print the response payload
-      Serial.println(pinwrite);                     //Print the response payload
+//      Serial.println(www);                     //Print the response payload
+//      Serial.println(ok);                     //Print the response payload
+//      Serial.println(pinmode);                     //Print the response payload
+//      Serial.println(pinwrite);                     //Print the response payload
      }
    
     http.end();   //Close connection
