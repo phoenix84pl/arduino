@@ -9,12 +9,12 @@ const char* password = "stworzonka";
 #include <IRrecv.h>
 
   //LED
-const int IRDA = 12;
+const int IRDA = 14;
 int LED_CH=0;             //numer kanalu, ktory aktualnie obslugujemy
-const int kanaly=6;       //ile jest kanalow (RGBW to 4 kanaly)
-const int LED_PIN[]={5, 6, 10, 7, 3, 4};       //1R, 1G, 1B, 1W, 2W, 3W, 4R, 4G, 4B, 4W (stan docelowy na 4 kanaly)
-int jasnosc[]={0, 0, 0, 0, 0, 0};       //jasnosc kanalow/diod
-boolean STATE[]={LOW, LOW, LOW, LOW, LOW, LOW};
+const int kanaly=5;       //ile jest kanalow (RGBW to 4 kanaly)
+const int LED_PIN[]={5, 4, 0, 2, 16};       //1R, 1G, 1B, 1W, 2W, 3W, 4R, 4G, 4B, 4W (stan docelowy na 4 kanaly)
+int jasnosc[]={0, 0, 0, 0, 0};       //jasnosc kanalow/diod
+boolean STATE[]={LOW, LOW, LOW, LOW, LOW};
 
 int animacja=0;           //numer animacji
 int etap=0;               //numer etapu w animacji, bo bez etapow dlugich nie mozna wylaczyc
@@ -38,12 +38,27 @@ String getValue(String data, char separator, int index)
     return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-void dioda_zmien(int dioda){
-    //przelacza diode na stan przeciwny
-  digitalWrite(LED_PIN[dioda], STATE[dioda]=!STATE[dioda]);
-  Serial.println(LED_PIN[dioda]);
-  Serial.println(STATE[dioda]);
-//   analogWrite(LED_PIN[dioda], 255);
+void dioda_zmien(int dioda, int stan=-1){
+    //ustawia jasnosc diody, 0-255, -1 oznacza stan przeciwny
+  if(stan==-1)
+  {
+    digitalWrite(LED_PIN[dioda], STATE[dioda]=!STATE[dioda]);
+    Serial.println(LED_PIN[dioda]);
+    Serial.println(STATE[dioda]);
+  }
+  else if(stan==0)
+  {
+    digitalWrite(LED_PIN[dioda], STATE[dioda]=LOW);
+    Serial.println(LED_PIN[dioda]);
+    Serial.println(STATE[dioda]);
+  }
+  else
+  {
+    STATE[dioda]=HIGH;
+    analogWrite(LED_PIN[dioda], stan);
+    Serial.println(LED_PIN[dioda]);
+    Serial.println(STATE[dioda]);
+  }
 }
 
 void blink(int dioda){
@@ -205,8 +220,11 @@ void animuj(int program){
 
 
 void setup () {
- 
+
+    //serial
   Serial.begin(115200);
+
+    //wifi
   WiFi.begin(ssid, password);
  
   Serial.print("Connecting");
@@ -215,12 +233,26 @@ void setup () {
     delay(1000);
     Serial.print(".");
   }
+
+    //ir
+  irrecv.enableIRIn();
+//  irrecv.blink13(true);
+
+  pinMode(LED_PIN[0], OUTPUT);
+  pinMode(LED_PIN[1], OUTPUT);
+  pinMode(LED_PIN[2], OUTPUT);
+  pinMode(LED_PIN[3], OUTPUT);
+  pinMode(LED_PIN[4], OUTPUT);
+  pinMode(LED_PIN[5], OUTPUT);
+
+  blink(0); //mrugnij pierwszymi diodami, ze dziala
 }
  
 void loop()
 {
-  if (WiFi.status() == WL_CONNECTED)
-  { //Check WiFi connection status
+    //wifi
+  if(WiFi.status()==WL_CONNECTED)
+  {
    
     HTTPClient http;  //Declare an object of class HTTPClient
   
@@ -243,8 +275,11 @@ void loop()
       {
         for(int i0=0; i0<=4; i0++)
         {
-          pinMode(i0, bitRead(pinmode.toInt(), i0));
-          digitalWrite(i0, bitRead(pinwrite.toInt(), i0));
+            //sterowanie bezposrednio pinami
+//          pinMode(i0, bitRead(pinmode.toInt(), i0));
+//          digitalWrite(i0, bitRead(pinwrite.toInt(), i0));
+            //sterowanie diodami
+          dioda_zmien(i0, bitRead(pinmode.toInt(), i0)==1?1023:0);
         }
       }
       
@@ -257,6 +292,28 @@ void loop()
     http.end();   //Close connection
    
   } 
-  delay(1000);    //Send a request every 3 seconds
- 
+
+    //ir
+  if(irrecv.decode(&results)){
+    int wynik=results.value;
+    Serial.println(wynik);
+    irrecv.resume();
+    if(results.value==551505585) dioda_zmien(0);
+    if(results.value==551521905) dioda_zmien(1);
+    if(results.value==551519865) dioda_zmien(2);
+    if(results.value==551536185) dioda_zmien(3);
+    if(results.value==551542815) dioda_zmien(4);
+    if(results.value==551510175) dioda_zmien(5);
+    if(results.value==551537970) kanal_zmien(1);
+    if(results.value==551505330) kanal_zmien(0);
+    if(results.value==551487480) jasnosc_zmien(1);
+    if(results.value==551520120) jasnosc_zmien(-1);
+
+    if(results.value==551489010) animacja=1;
+    if(results.value==551509410) animacja_zmien(0);
+    if(results.value==551514510) animacja_zmien(1);
+    if(results.value==551547150) animacja_zmien(-1);
+  }
+//  Serial.println(animacja);
+  if(animacja>0) animuj(animacja); 
 }
