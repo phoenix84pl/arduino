@@ -14,10 +14,10 @@ String DAPI_DEVICE="antresola";
   //LED
 const int IRDA = 14;
 int LED_CH=0;             //numer kanalu, ktory aktualnie obslugujemy
-const int kanaly=8;       //ile jest kanalow (RGBW to 4 kanaly)
-const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
-//const int kanaly=10;       //ile jest kanalow (RGBW to 4 kanaly)
-//const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15, 3, 1};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
+//const int kanaly=8;       //ile jest kanalow (RGBW to 4 kanaly)
+//const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
+const int kanaly=10;       //ile jest kanalow (RGBW to 4 kanaly)
+const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15, 3, 1};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
 int STATE[]={0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int animacja=0;           //numer animacji
