@@ -18,15 +18,14 @@ const int kanaly=8;       //ile jest kanalow (RGBW to 4 kanaly)
 const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
 //const int kanaly=10;       //ile jest kanalow (RGBW to 4 kanaly)
 //const int LED_PIN[]={16, 5, 4, 0, 2, 12, 13, 15, 3, 1};       //1R, 1G, 1B, 1W, 1L, 2R, 2G, 2B, 2W, 2L UWAGA! 3 i 1 to TX i RX. Albo białe światła, albo Serial
-int STATE[]={0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+int jasnosc[]={0, 0, 0, 0, 0, 0, 0, 0, 0, 0};       //jasnosc kanalow/diod
+boolean STATE[]={0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //docelowo do usuniecia, bo jasnosc juz trzyma stan diod
 
 int animacja=0;           //numer animacji
 int etap=0;               //numer etapu w animacji, bo bez etapow dlugich nie mozna wylaczyc
 
 IRrecv irrecv(IRDA);
 decode_results results;
-
-String stareWWW=""; //zeby nie zawalac seriala tym samym
 
 String getValue(String data, char separator, int index)
 {
@@ -46,30 +45,30 @@ String getValue(String data, char separator, int index)
 
 void dioda_zmien(int dioda, int stan=-1, int update=0){
     //ustawia jasnosc diody, 0-255, -1 oznacza stan przeciwny
-  if(stan==-1) analogWrite(LED_PIN[dioda], STATE[dioda]=STATE[dioda]>0?0:1023);
-  else analogWrite(LED_PIN[dioda], STATE[dioda]=stan);
-  
+  if(stan==-1) analogWrite(LED_PIN[dioda], STATE[dioda]=STATE[dioda]>0?0:75);
+  else if(stan==0) analogWrite(LED_PIN[dioda], STATE[dioda]=0);
+  else analogWrite(LED_PIN[dioda], STATE[dioda]=1023);
+
   //update na serwerze
   if(animacja==0 && update>0) //zeby nie dostal pierdolca przy animacjach
   {
     String link=DAPI_URL+"?name="+DAPI_NAME+"&secret="+DAPI_SECRET+"&action=ledUpdate&device="+DAPI_DEVICE+"&data={%22"+dioda+"%22:"+STATE[dioda]+"}";
-//    Serial.println(link);
+    Serial.println(link);
     
     HTTPClient http;  //Declare an object of class HTTPClient
     http.begin(link);  //Specify request destination
     int httpCode = http.GET();                                                                  //Send the request
-    http.end();   //Close connection
   }
 //    Serial.println(LED_PIN[dioda]);
 //    Serial.println(STATE[dioda]);
 }
 
 void blink(int dioda){
-  analogWrite(LED_PIN[dioda], 0);
+  digitalWrite(LED_PIN[dioda], LOW);
   delay(50);
-  analogWrite(LED_PIN[dioda], 1023);
+  digitalWrite(LED_PIN[dioda], HIGH);
   delay(50);
-  analogWrite(LED_PIN[dioda], STATE[dioda]);
+  digitalWrite(LED_PIN[dioda], STATE[dioda]);
 }
 
 void kanal_zmien(int kierunek){
@@ -87,19 +86,16 @@ void kanal_zmien(int kierunek){
 
 void jasnosc_zmien(int kierunek){
   //zmienia jasnosc kanalu (jesli kierunek 1 to w gore, a 0 to w dol)
-  int krok=100;
-  if(kierunek==-1)
-  {
-    STATE[LED_CH]=STATE[LED_CH]-krok;
-    if(STATE[LED_CH]<0) STATE[LED_CH]=0;
+  int krok=32;
+  if(kierunek==-1){
+    jasnosc[LED_CH]=jasnosc[LED_CH]-krok;
+    if(jasnosc[LED_CH]<0) jasnosc[LED_CH]=0;
+  } else {
+    jasnosc[LED_CH]=jasnosc[LED_CH]+krok;
+    if(jasnosc[LED_CH]>255) jasnosc[LED_CH]=255;  
   }
-  else
-  {
-    STATE[LED_CH]=STATE[LED_CH]+krok;
-    if(STATE[LED_CH]>1023) STATE[LED_CH]=1023;  
-  }
-  
-  dioda_zmien(LED_CH, STATE[LED_CH], 1);    
+  analogWrite(LED_PIN[LED_CH], jasnosc[LED_CH]);    
+  Serial.println(jasnosc[LED_CH]);
 }
 
 void animacja_zmien(int kierunek){
@@ -116,7 +112,6 @@ void animacja_zmien(int kierunek){
     if(animacja>max) animacja=0;  
   }
   nieanimuj();      
-  Serial.print("Animacja: ");
   Serial.println(animacja);
 }
 
@@ -124,27 +119,27 @@ void nieanimuj()
 {
     //przywraca stan domyslny po animacji
   etap=0;
-  analogWrite(LED_PIN[0], STATE[0]);
-  analogWrite(LED_PIN[1], STATE[1]);
-  analogWrite(LED_PIN[2], STATE[2]);
-  analogWrite(LED_PIN[3], STATE[3]);
-  analogWrite(LED_PIN[4], STATE[4]);
-  analogWrite(LED_PIN[5], STATE[5]);
-  analogWrite(LED_PIN[6], STATE[6]);
+  digitalWrite(LED_PIN[0], STATE[0]);
+  digitalWrite(LED_PIN[1], STATE[1]);
+  digitalWrite(LED_PIN[2], STATE[2]);
+  digitalWrite(LED_PIN[3], STATE[3]);
+  digitalWrite(LED_PIN[4], STATE[4]);
+  digitalWrite(LED_PIN[5], STATE[5]);
+  digitalWrite(LED_PIN[6], STATE[6]);
 }
 
 void animuj(int program){
   //funkcja robi jakas animacje
   
-  Serial.println(program);
+//  Serial.println("Animacja");
 
   switch(program){
     case 1: //stroboskop
       digitalWrite(LED_PIN[4], HIGH);
-      digitalWrite(LED_PIN[9], HIGH);
+      digitalWrite(LED_PIN[5], HIGH);
       delay(10);
       digitalWrite(LED_PIN[4], LOW);
-      digitalWrite(LED_PIN[9], LOW);
+      digitalWrite(LED_PIN[5], LOW);
       delay(150);
       break;
       
@@ -252,10 +247,8 @@ void setup () {
  
 void loop()
 {
-    //wifi
-/*  
-*/
     //ir
+  delay(200);
   if(irrecv.decode(&results))
   {
     int wynik=results.value;
@@ -277,22 +270,20 @@ void loop()
     if(results.value==551514510) animacja_zmien(1);
     if(results.value==551547150) animacja_zmien(-1);
   }
-
-  if(animacja>0) animuj(animacja);
-  else if(WiFi.status()==WL_CONNECTED)
+/*  else if(WiFi.status()==WL_CONNECTED)    //wifi
   {
-   
     HTTPClient http;  //Declare an object of class HTTPClient
     String link=DAPI_URL+"?name="+DAPI_NAME+"&secret="+DAPI_SECRET+"&action=ledGet&device="+DAPI_DEVICE+"&format=semicolon";
 //    Serial.println(link);
     
     http.begin(link);  //Specify request destination
     int httpCode = http.GET();                                                                  //Send the request
-
+  
     if(httpCode>0)
     {
       String www=http.getString();   //Get the request response payload
       String ok=getValue(www, ';', 0);
+//      String ledmode=getValue(www, ';', 1);
  
       if(ok!="OK")
       {
@@ -305,21 +296,21 @@ void loop()
         {
             //sterowanie diodami
           String tmp=getValue(www, ';', 1+i0);  //odczytuj kolejne pozycje
-          dioda_zmien(i0, tmp.toInt());
+//          dioda_zmien(i0, tmp.toInt());
         }
       }
       
-      if(www!=stareWWW)
-      {
-        Serial.print("Stare: ");
-        Serial.println(stareWWW);                     //Print the response payload
-        Serial.print("Nowe:  ");
-        Serial.println(www);                     //Print the response payload
-      }
-      stareWWW=www;
+      Serial.println(www);                     //Print the response payload
+//      Serial.println(ok);                     //Print the response payload
+//      Serial.println(pinmode);                     //Print the response payload
+//      Serial.println(pinwrite);                     //Print the response payload
      }
    
     http.end();   //Close connection
    
   } 
+*/  else if(animacja>0) animuj(animacja);
+
+//  Serial.println(animacja);
+//  delay(500);
 }
